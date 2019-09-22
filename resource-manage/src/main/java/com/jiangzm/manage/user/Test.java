@@ -7,8 +7,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class Test {
 
     @GetMapping("/test")
-    public void test() {
+    public String test() {
         System.out.println("=================");
+        return "asdhs";
     }
 
 }
