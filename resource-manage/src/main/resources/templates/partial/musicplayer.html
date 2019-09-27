@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+
+<body>
+	<div th:fragment="musicplayer">
+		<div ref="musicplayer">
+			<audio ref="musicAudio"></audio>
+			<div @click="showMusicPanel" :class="[musicPlayState ? 'rotate' : '', 'audio_icon']"></div>
+			<div class="m_player" v-show="musicPanelShowState">
+				<!-- 主体 -->
+				<div class="m_player_dock">
+					<!-- 歌曲信息 -->
+					<div class="music_icon">
+						<a href="javascript:;" class="album_pic">
+							<img :src="currentMusic.converUrl?currentMusic.converUrl:'/images/music/a1.png'" :onerror="errorImg"  alt="">
+						</a>
+					</div>
+					<!-- 暂停 上一首 下一首 -->
+					<div class="bar_op">
+						<strong class="prev_bt" title="上一首" @click="prevMusic"></strong>
+						<strong :class="[musicPlayState ? 'pause_bt' : 'play_bt','tc']" title="播放"@click="play"></strong>
+						<strong class="next_bt" title="下一首" @click="nextMusic"></strong>
+					</div>
+					<div style="margin-left: 110px;margin-top: -15px;">
+						<marquee ref="titleRun" width="150" style="color:#fff">
+							{{currentMusic.title}}--{{currentMusic.singer}}
+						</marquee>
+					</div>
+				</div>
+				<!-- 隐藏显示按钮 -->
+				<button @click="showMusicPanel" type="button" class="folded_bt">
+					<i class="el-icon-arrow-right " style="color: #fff"></i>
+				</button>
+				<!-- 歌曲列表 -->
+				<div class="play_list_frame" v-show="musicPlayListShowState">
+					<div class="play_list_title">
+						<ul>
+							<li class="current"><a href="javascript:;">播放列表</a></li>
+						</ul>
+					</div>
+					<div class="play_list">
+						<div class="play_list_main">
+							<div class="single_list">
+								<ul v-if="musicList.length>0">
+									<li :class="[currentMusicIndex==index ? 'play_current' : '', 'li']" v-for="(m,index) in musicList" @click="playMusic(m,index)">
+										<strong :class="[currentMusicIndex==index ? 'play_current' : '', 'music_name line-limit-length']">
+											{{m.title}}--{{m.singer}}
+										</strong>
+										<div class="list_cp">
+											<strong class="btn_like" title="喜欢"></strong>
+											<strong class="btn_share" title="分享"></strong>
+											<strong class="btn_fav" title="收藏到歌单"></strong>
+											<strong class="btn_del" title="从列表中删除"></strong>
+										</div>
+									</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+
+				</div>
+				<!-- 打开隐藏歌曲列表-->
+				<span @click="showMusicPlayList" class="open_list">
+					<i class="el-icon-tickets"></i>
+				</span>
+			</div>
+		</div>
+	</div>
+</body>
+
+</html>

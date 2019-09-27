@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+      layout:decorator="partial/layout" lang="zh">
+<head>
+    <link href="https://cdn.bootcss.com/aplayer/1.10.1/APlayer.min.css" rel="stylesheet">
+    <link th:href="@{/css/warmerplayer.css}" rel="stylesheet" />
+    <style type="text/css" scoped>
+        text {
+            cursor: pointer;
+        }
+        .aplayer.aplayer-fixed.aplayer-narrow .aplayer-body {
+            width: 78px!important;
+        }
+        #typedItem{
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<div layout:fragment="main">
+    <div>
+        <warmer-github-view :data="'github'"></warmer-github-view>
+        <warmer-musicplayer-view v-bind:data="'music'"></warmer-musicplayer-view>
+        <div class="picsbox">
+            <el-carousel :interval="3000" arrow="always">
+                <el-carousel-item v-for="banner in bannerList" :key="banner.id">
+                    <a :href="banner.linkUrl">
+                        <img :src="banner.imgSrc" alt="个人博客" data-bd-imgshare-binded="1">
+                    </a>
+                    <span class="imginfo">{{banner.title}}</span>
+                </el-carousel-item>
+            </el-carousel>
+        </div>
+        <div class="hotmessage">
+            <div class="news">
+                <div  class="item">
+                    <i style="color: #ff0000;" class="fa fa-heart" aria-hidden="true"></i>
+                    <span id="typedItem"></span>
+                    <i style="color: #ff0000;" class="fa fa-heart" aria-hidden="true"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="blogcontainer">
+        <div class="blogsbox">
+            <warmer-record-view :data="articleList" :showmore="showMore" :loading="loading"></warmer-record-view>
+        </div>
+        <!--blogsbox end-->
+        <div class="sidebar">
+            <div class="cate">
+                <div class="sidecloumn"><div><h2 class="hometitle">分类</h2></div></div>
+                <el-tree ref="mycatetree" node-key="id"
+                         :load="loadCategory"
+                         @check="treeNodeClick"
+                         :check-on-click-node="true"
+                         lazy
+                         :props="treeData"
+                         show-checkbox
+                         class="e-tree">
+                </el-tree>
+            </div>
+            <div class="tuijian">
+                <div class="sidecloumn"><div><h2 class="hometitle">动态</h2></div></div>
+                <template>
+                    <el-tabs v-model="tabActiveName" type="card">
+                        <el-tab-pane label="推荐" name="first">
+                            <ul class="sidenews" v-if="recommendArticlelist">
+                                <li v-for="article in recommendArticlelist">
+                                    <a :href="['/detail/'+article.id]" target="_blank">{{article.title}} </a>
+                                </li>
+                            </ul>
+                        </el-tab-pane>
+                        <el-tab-pane label="热门" name="second">
+                            <ul class="sidenews" v-if="topReadArticlelist">
+                                <li v-for="article in topReadArticlelist">
+                                    <a :href="['/detail/'+article.id]" target="_blank">{{article.title}} </a>
+                                </li>
+                            </ul>
+                        </el-tab-pane>
+                        <el-tab-pane label="吐槽" name="third">
+                            <img style="width: 100%" src="/images/fouren.jpg">
+                        </el-tab-pane>
+                    </el-tabs>
+                </template>
+            </div>
+            <div class="cloud sidecloumn">
+                <div><h2 class="hometitle">标签云</h2></div>
+                <ul v-if="tagList" id="tagcontainer"></ul>
+            </div>
+            <div class="links sidecloumn">
+                <div><h2 class="hometitle">友情链接</h2></div>
+                <ul v-if="partnerList">
+                    <li v-for="partner in partnerList">
+                        <a :href="partner.siteUrl" :alt="partner.siteDesc" target="_blank">{{partner.siteName}}</a>
+                    </li>
+                </ul>
+            </div>
+            <!-- 设置固定关注我们 -->
+            <warmer-appfocus-view :data="'focus'"></warmer-appfocus-view>
+        </div>
+    </div>
+</div>
+<div layout:fragment="js">
+    <script th:src="@{/js/d3.v4.min.js}" src="https://d3js.org/d3.v4.min.js" type="text/javascript"></script>
+    <script src="https://cdn.bootcss.com/d3-cloud/1.2.5/d3.layout.cloud.min.js"></script>
+    <script th:inline="javascript" th:src="@{/js/scrollreveal.js}" type="text/javascript"></script>
+    <script th:inline="javascript" th:src="@{/js/components/apprecordview.js}" type="text/javascript"></script>
+    <script type="text/javascript" src="https://cdn.bootcss.com/typed.js/2.0.5/typed.js"></script>
+    <script src="https://cdn.bootcss.com/aplayer/1.10.1/APlayer.min.js"></script><!--音乐播放器组件-->
+    <script th:inline="javascript" th:src="@{/js/components/musicplayer.js}" type="text/javascript"></script>
+    <script type="text/javascript">
+        var app = new Vue({
+            el: '#app',
+            data: {
+                queryForm: {
+                    pageIndex: 1,
+                    pageSize: 10,
+                    title: '',
+                    tag: '',
+                    categoryCodes:[]
+                },
+                showMore: true,
+                loading: true,
+                articleList: [],
+                topReadArticlelist: [],
+                recommendArticlelist: [],
+                bannerList: [],
+                scrollReveal: ScrollReveal(),
+                partnerList: [],
+                tagList: [],
+                parentId:0,
+                treeData:{
+                    label: 'name',
+                    children: 'zones',
+                    isLeaf:'isLeaf'
+                },
+                tabActiveName:'first',
+                expression:[
+                    'impossible的完整形式是 i\'m possible',
+                    '这个城市大得让人到处能一见钟情，却没法重逢。',
+                    '我祈祷拥有一颗透明的心灵，和会流泪的眼睛。',
+                    '你都如何回忆我，带着笑或是很沉默。']
+            },
+            mounted() {
+                // 缓存指针
+                var _this = this;
+                _this.$nextTick(function () {
+                    _this.initScrollRevealOption();
+                    // 注册scroll事件并监听
+                    window.addEventListener('scroll', ()=> {
+                        var scrollTop = document.documentElement.scrollTop;
+                        _this.scrollTop=scrollTop;
+                        if(scrollTop + window.innerHeight >= document.body.clientHeight) {
+                            if(!_this.scrollDisable) {
+                                if(_this.showMore){
+                                    _this.initData();
+                                }
+                            }
+                        }
+                    },true);
+                })
+                _this.initTyped();
+            },
+            created() {
+                this.initData();
+                this.initBanner();
+                this.getRecommendArticleList();
+                this.getTopReadArticleList();
+                this.initPartner();
+                this.initTagList();
+            },
+            methods: {
+                initTyped(){
+                    var _this=this;
+                    var boxObj3 = document.getElementById('typedItem');
+                    new Typed(boxObj3,{
+                        strings: _this.expression,
+                        typeSpeed: 200,
+                        startDelay: 1000,
+                        loop: true,
+                        loopCount: Infinity,
+                        cursorChar: 'ღ' //
+                    });
+                },
+                treeNodeClick(node){
+                    var tree = this.$refs.mycatetree;
+                    var nodes = tree.store.getCheckedNodes();
+                    var arraycodes = [];
+                    for (var i = 0; i < nodes.length; i++) {
+                        var tem = nodes[i].code;
+                        arraycodes.push(tem);
+                    }
+                    this.queryForm.categoryCodes = arraycodes;
+                    this.articleList = [];
+                    this.queryForm.pageIndex=1;
+                    this.initData();
+                },
+                loadCategory(node, resolve) {
+                    var _this = this;
+                    if(node.level==0){
+                        _this.parentId=0;
+                    }else{
+                        _this.parentId=node.data.id;
+                    }
+                    var param = {parentId:_this.parentId};
+                    $.ajax({
+                        data: param,
+                        type: "POST",
+                        url: "/getTreelist",
+                        success: function (result) {
+                            if (result.code == 0) {
+                                resolve(result.data);
+                                _this.parentId = 0;
+                            }
+                        },
+                        error: function (data) {
+                        }
+                    });
+                },
+                initData() {
+                    var _this = this;
+                    _this.scrollDisable = true;
+                    _this.loading = true;
+                    var param = this.queryForm;
+                    $.ajax({
+                        type: "POST",
+                        url: "/getArticlelist",
+                        //url: "/getEsArticlelist",//启用es时用这个
+                        data: JSON.stringify(param),
+                        dataType: "json",
+                        contentType:"application/json",
+                        success: function (result) {
+                            if (result.code == 0) {
+                                _this.loading = false;
+                                //var resultCount=result.data.recordList.length;//启用es时用这个
+                                var resultCount = result.data.rows.length;
+                                if (resultCount > 0) {
+                                    //_this.articleList = _this.articleList.concat(result.data.recordList);//启用es时用这个
+                                    _this.articleList = _this.articleList.concat(result.data.rows);
+                                    _this.queryForm.pageIndex=_this.queryForm.pageIndex+1;
+                                }
+                                _this.showMore = resultCount == _this.queryForm.pageSize ? true : false;
+                            }
+                            // 插入数据完成后
+                            _this.scrollDisable = false;
+
+                        }
+                    });
+                    //延迟1秒后为样式加载动画  //_this.scrollReveal.sync();//官方说这样可以做异步，然并卵
+                    setTimeout(function(result) {
+                        _this.initScrollRevealOption();
+                    },1000);
+                },
+                initd3cloud(data) {
+                    var _this = this;
+                    //var fill = d3.scale.category20();
+                    var formatData = data.map(function (d) {
+                        return {"id": d.id, "text": d.value, "size": 10 + Math.random() * 50, "color": d.color};
+                    });
+                    d3.layout.cloud().size([325, 200]) //size([x,y])  词云显示的大小
+                        .words(formatData)
+                        .rotate(function () {
+                            return ~~(Math.random() * 2) * 90;
+                        })
+                        .font("Impact")
+                        .fontSize(function (d) {
+                            return d.size;
+                        })
+                        .on("end", _this.draw)//结束时运行draw函数
+                        .start();
+                },
+                draw(words) {
+                    var _this = this;
+                    d3.select("#tagcontainer").append("svg")
+                        .attr("width", 345)
+                        .attr("height", 205)
+                        .append("g")
+                        .attr("transform", "translate(160,110)")
+                        .selectAll("text")
+                        .data(words)
+                        .enter().append("text")
+                        .style("font-size", function (d) {
+                            return d.size + "px";
+                        })
+                        .style("font-family", "Impact")
+                        .style("fill", function (d, i) {
+                            return d.color;
+                        })
+                        .attr("text-anchor", "middle")
+                        .attr("transform", function (d) {
+                            return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+                        })
+                        .text(function (d) {
+                            return d.text;
+                        })
+                        .on("click", function (d) {
+                            var tag = d.id;
+                            _this.queryForm.tag = tag;
+                            _this.queryForm.pageIndex = 1;
+                            _this.articleList = [];
+                            _this.initData();
+                            _this.backToTop();
+                        });
+                },
+                backToTop() {
+                    timer = setInterval(function () {
+                        var osTop = document.documentElement.scrollTop || document.body.scrollTop
+                        var ispeed = Math.floor(-osTop / 5)
+                        document.documentElement.scrollTop = document.body.scrollTop = osTop + ispeed
+                        if (osTop === 0) {
+                            clearInterval(timer);
+                        }
+                    }, 30)
+                },
+                tagClick() {
+
+                },
+                initPartner() {
+                    var _this = this;
+                    $.ajax({
+                        type: "POST",
+                        url: "/getPartnerlist",
+                        data: {},
+                        success: function (result) {
+                            if (result.code == 0) {
+                                var resultCount = result.data.length;
+                                if (resultCount > 0) {
+                                    _this.partnerList = result.data;
+                                }
+                            }
+                        }
+                    });
+                },
+                initBanner() {
+                    var _this = this;
+                    $.ajax({
+                        type: "POST",
+                        url: "/getBannerlist",
+                        data: {},
+                        success: function (result) {
+                            if (result.code == 0) {
+                                var resultCount = result.data.rows.length;
+                                if (resultCount > 0) {
+                                    _this.bannerList = result.data.rows;
+                                }
+                            }
+                        }
+                    });
+                },
+                initTagList() {
+                    var _this = this;
+                    $.ajax({
+                        type: "POST",
+                        url: "/getTaglist",
+                        data: {},
+                        success: function (result) {
+                            if (result.code == 0) {
+                                var resultCount = result.data.length;
+                                if (resultCount > 0) {
+                                    _this.tagList = result.data;
+                                    _this.initd3cloud(result.data);
+                                }
+                            }
+                        }
+                    });
+                },
+                getRecommendArticleList() {
+                    var _this = this;
+                    $.ajax({
+                        type: "POST",
+                        url: "/getRecommendArticlelist",
+                        data: {},
+                        success: function (result) {
+                            if (result.code == 0) {
+                                var resultCount = result.data.length;
+                                if (resultCount > 0) {
+                                    _this.recommendArticlelist = result.data;
+                                }
+                            }
+                        }
+                    });
+
+                },
+                getTopReadArticleList() {
+                    var _this = this;
+                    $.ajax({
+                        type: "POST",
+                        url: "/getTopReadArticleList",
+                        data: {},
+                        success: function (result) {
+                            if (result.code == 0) {
+                                var resultCount = result.data.length;
+                                if (resultCount > 0) {
+                                    _this.topReadArticlelist = result.data;
+                                }
+                            }
+                        }
+                    });
+
+                },
+                initScrollRevealOption() {
+                    this.scrollReveal.reveal('.blogs',{
+                        duration: 500,//动画的时长
+                        delay: 200,//延迟时间
+                        origin: 'bottom',//动画开始的位置，'bottom', 'left', 'top', 'right'
+                        reset: true,//回滚的时候是否再次触发动画
+                        mobile: false,//在移动端是否使用动画
+                        distance: '10px',//滚动的距离，单位可以用%，rem等
+                        opacity: 0.001,//其他可用的动画效果
+                        easing: 'linear',
+                        scale: 1
+                    });
+                }
+            }
+        })
+    </script>
+</div>
+</body>
+</html>

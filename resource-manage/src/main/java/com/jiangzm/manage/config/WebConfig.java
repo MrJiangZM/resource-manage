@@ -13,6 +13,7 @@ public class WebConfig extends WebMvcConfigurationSupport {
         registry.addResourceHandler("/**")
                 .addResourceLocations("classpath:/resources/")
                 .addResourceLocations("classpath:/static/")
+                .addResourceLocations("classpath:/templates/")
                 .addResourceLocations("classpath:/public/");
         super.addResourceHandlers(registry);
     }

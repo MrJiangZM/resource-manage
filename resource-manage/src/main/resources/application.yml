@@ -1,2 +1,8 @@
 server:
-  port: 9600
+  port: 9601
+spring:
+  thymeleaf:
+    prefix: classpath:/templates
+    suffix: .html
+    encoding: utf-8
+    enabled: true
