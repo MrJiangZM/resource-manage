@@ -16,7 +16,7 @@
     </parent>
 
     <properties>
-        <springboot.version>2.1.7.RELEASE</springboot.version>
+        <springboot.version>2.5.12</springboot.version>
         <lombok.version>1.18.8</lombok.version>
     </properties>
 
